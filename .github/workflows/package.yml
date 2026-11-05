@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'EcoSim.sb3' # Only runs when your game file is updated
+      - 'EcoSim.sb3'
   workflow_dispatch:
 
 jobs:
@@ -15,18 +15,18 @@ jobs:
       contents: write
 
     steps:
+      # Fixes the slowdown by telling GitHub to download only the 2 most recent commits
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-      # Extracts the tag name directly from the commit message
       - name: Extract Version From Commit
         id: get_version
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
-          # Searches for a pattern like vX.Y.Z in the commit message
           VERSION=$(echo "$COMMIT_MSG" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
           
-          # Fallback if you forget to include a version in the commit name
           if [ -z "$VERSION" ]; then
             VERSION="v0.0.${{ github.run_number }}"
           fi
@@ -39,13 +39,12 @@ jobs:
         with:
           node-version: '20'
 
-      # Packages your exact EcoSim.sb3 file
       - name: Build Project with TurboWarp Packager
         run: |
           mkdir dist
           npx turbowarp-packager-cli -i EcoSim.sb3 -o dist/index.html
 
-      # Creates a new release utilizing your commit's version name
+      # Uses lightweight tags so Git doesn't build heavy release history trees
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
