@@ -1,36 +1,55 @@
-name: Package TurboWarp Project
+name: Package and Release TurboWarp Project
 
 on:
   push:
     branches:
-      - main  # Runs whenever you push changes to your main branch
-  workflow_dispatch: # Allows you to run it manually from the Actions tab
+      - main
+    paths:
+      - 'EcoSim.sb3' # Only runs when your game file is updated
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      # Step 1: Clone the repository onto the runner
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2: Use Node.js environment
+      # Extracts the tag name directly from the commit message
+      - name: Extract Version From Commit
+        id: get_version
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          # Searches for a pattern like vX.Y.Z in the commit message
+          VERSION=$(echo "$COMMIT_MSG" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+          
+          # Fallback if you forget to include a version in the commit name
+          if [ -z "$VERSION" ]; then
+            VERSION="v0.0.${{ github.run_number }}"
+          fi
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # Step 3: Package the .sb3 file using the CLI tool
-      # Replace 'project.sb3' with your actual file name
+      # Packages your exact EcoSim.sb3 file
       - name: Build Project with TurboWarp Packager
         run: |
           mkdir dist
           npx turbowarp-packager-cli -i EcoSim.sb3 -o dist/index.html
 
-      # Step 4: Save the output folder as a download link in GitHub Actions
-      - name: Upload Packaged Artifact
-        uses: actions/upload-artifact@v4
+      # Creates a new release utilizing your commit's version name
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: packaged-game
-          path: dist/
+          tag_name: ${{ env.VERSION }}
+          name: "Release ${{ env.VERSION }}"
+          files: dist/index.html
+          generate_release_notes: true
