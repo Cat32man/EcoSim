@@ -1,0 +1,36 @@
+name: Package TurboWarp Project
+
+on:
+  push:
+    branches:
+      - main  # Runs whenever you push changes to your main branch
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Clone the repository onto the runner
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Use Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Step 3: Package the .sb3 file using the CLI tool
+      # Replace 'project.sb3' with your actual file name
+      - name: Build Project with TurboWarp Packager
+        run: |
+          mkdir dist
+          npx turbowarp-packager-cli -i EcoSim.sb3 -o dist/index.html
+
+      # Step 4: Save the output folder as a download link in GitHub Actions
+      - name: Upload Packaged Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-game
+          path: dist/
